@@ -1,5 +1,5 @@
 import { Alchemy, Network } from 'alchemy-sdk';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import './App.css';
 
@@ -21,16 +21,49 @@ const alchemy = new Alchemy(settings);
 
 function App() {
   const [blockNumber, setBlockNumber] = useState();
+  const [blockTransaction, setBlockTransaction] = useState(["empty"]);
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     async function getBlockNumber() {
       setBlockNumber(await alchemy.core.getBlockNumber());
     }
-
     getBlockNumber();
   });
 
-  return <div className="App">Block Number: {blockNumber}</div>;
+
+  const sendRequest = useCallback(async () => {
+    // don't send again while we are sending
+    if (isSending) return
+
+    // update state
+    setIsSending(true)
+    // send the actual request
+    setBlockTransaction((await alchemy.core.getBlock(blockNumber)).transactions);
+    setIsSending(false);
+
+  }, [isSending]); // update the callback if the state changes
+
+  return (<>
+    <div className="App">Block Number: {blockNumber}</div>
+    <input type="button" value='Show Details' disabled={isSending} onClick={sendRequest}/>
+    <table>
+      <tbody>
+        <tr>
+          <td>No.</td>
+          <td>Transaction Hash</td>
+        </tr>
+        {blockTransaction.map((item, index) => {
+          return (
+            <tr key={index.toString()}>
+                <td>{index+1}</td>
+                <td>{item}</td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  </>);
 }
 
 export default App;
